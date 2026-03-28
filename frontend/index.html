@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brabo IRL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-mark"></div>
+    <div class="logo-text">BRABO <span>IRL</span></div>
+  </div>
+  <div class="header-right">
+    <div class="mode-badge" id="modeBadge">— —</div>
+    <div class="ws-status">
+      <div class="ws-dot" id="wsDot"></div>
+      <span id="wsLabel">conectando</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Hero: status da transmissão ──────────────── -->
+  <div class="stream-hero" id="streamHero">
+    <div>
+      <div class="stream-label">status da transmissão</div>
+      <div class="stream-title idle" id="streamTitle">AGUARDANDO</div>
+      <div class="stream-sub" id="streamSub">Nenhuma transmissão ativa</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+      <div class="live-indicator" id="liveIndicator">
+        <div class="live-dot"></div>
+        LIVE
+      </div>
+      <div id="streamControls" style="display:flex;gap:8px">
+        <button class="btn btn-primary" id="btnStart" onclick="startStream()">▶ INICIAR</button>
+        <button class="btn btn-danger"  id="btnStop"  onclick="stopStream()" disabled>■ PARAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stats ─────────────────────────────────────── -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Bitrate</div>
+      <div class="stat-value" id="statBitrate">—</div>
+      <div class="stat-unit">kbps</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Latência</div>
+      <div class="stat-value" id="statLatency">—</div>
+      <div class="stat-unit">ms</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pacotes perdidos</div>
+      <div class="stat-value" id="statDropped">—</div>
+      <div class="stat-unit">total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">CPU / Memória</div>
+      <div class="stat-value" id="statCpu">—</div>
+      <div class="stat-unit">% / %</div>
+    </div>
+  </div>
+
+  <!-- ── Uptime + Servidores ───────────────────────── -->
+  <div class="two-col">
+
+    <!-- Uptime -->
+    <div class="card">
+      <div class="card-title">tempo ao vivo</div>
+      <div class="uptime-display" id="uptimeDisplay">00:00:00</div>
+      <div style="text-align:center;margin-top:8px">
+        <span id="uptimeLabel" style="font-family:var(--mono);font-size:10px;color:var(--muted)">sem transmissão ativa</span>
+      </div>
+    </div>
+
+    <!-- Servidores (só no modo transmissor) -->
+    <div class="card" id="serversCard">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>servidores disponíveis</span>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:9px" onclick="scanServers()">↺ SCAN</button>
+      </div>
+      <div class="server-list" id="serverList">
+        <div class="empty-state">
+          procurando servidores...
+          <div class="scanning-anim"></div>
+        </div>
+      </div>
+
+      <!-- IP manual -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div class="form-label" style="margin-bottom:6px">ou conectar por IP manualmente</div>
+        <div style="display:flex;gap:8px">
+          <input
+            type="text"
+            class="form-input"
+            id="manualIp"
+            placeholder="ex: 192.168.191.1"
+            style="flex:1"
+            onkeydown="if(event.key==='Enter') addManualServer()"
+          >
+          <input
+            type="number"
+            class="form-input"
+            id="manualPort"
+            placeholder="9999"
+            value="9999"
+            style="width:72px"
+          >
+          <button class="btn btn-ghost" style="padding:8px 12px;white-space:nowrap" onclick="addManualServer()">+ ADD</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px">
+          IP ZeroTier do PC servidor · porta SRT padrão: 9999
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Config + Log ──────────────────────────────── -->
+  <div class="two-col">
+
+    <!-- Configurações -->
+    <div class="card" id="txSettingsArea">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>configurações de stream</span>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:9px" onclick="openDeviceModal()">🎥 DISPOSITIVOS</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Codec</label>
+          <select class="form-select" id="cfgCodec">
+            <option value="h264">H.264 (padrão)</option>
+            <option value="h265">H.265 (melhor)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Resolução</label>
+          <select class="form-select" id="cfgRes">
+            <option value="1920x1080">1080p</option>
+            <option value="1280x720">720p</option>
+            <option value="854x480">480p</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">FPS</label>
+          <select class="form-select" id="cfgFps">
+            <option value="60">60 fps</option>
+            <option value="30" selected>30 fps</option>
+            <option value="24">24 fps</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Áudio</label>
+          <select class="form-select" id="cfgAudio">
+            <option value="192">192 kbps</option>
+            <option value="128" selected>128 kbps</option>
+            <option value="96">96 kbps</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Áudio</label>
+          <select class="form-select" id="cfgAudio">
+            <option value="192">192 kbps</option>
+            <option value="128" selected>128 kbps</option>
+            <option value="96">96 kbps</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Buffer de Queda</label>
+          <select class="form-select" id="cfgBuffer">
+            <option value="false" selected>Desativado (Menor latência)</option>
+            <option value="true">Ativado (Evita quedas)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label">Bitrate de vídeo</label>
+        <div class="slider-wrap">
+          <input type="range" id="cfgBitrate" min="500" max="12000" step="500" value="4000" oninput="updateBitrateLabel()">
+          <span class="slider-val" id="bitrateLabel">4000 kbps</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-full" style="margin-top:16px" onclick="saveConfig()">SALVAR CONFIGURAÇÕES</button>
+    </div>
+
+    <!-- Log do sistema -->
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between">
+        <span>log do sistema</span>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:9px" onclick="clearLog()">limpar</button>
+      </div>
+      <div class="log-area" id="logArea"></div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ── Modal de dispositivos ─────────────────────── -->
+<div class="modal-overlay" id="deviceModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span>selecionar dispositivos</span>
+      <button class="modal-close" onclick="closeDeviceModal()">✕</button>
+    </div>
+    <button onclick="loadDevices({ askPermission: true })">Configurar Dispositivos</button>
+
+    <div class="device-section">
+      <div class="device-section-title">📷 Câmera de vídeo</div>
+      <div id="cameraList"><div class="device-loading">carregando câmeras...</div></div>
+    </div>
+
+    <div class="device-section">
+      <div class="device-section-title">🎤 Microfone / Áudio</div>
+      <div id="micList"><div class="device-loading">carregando microfones...</div></div>
+    </div>
+
+    <div class="device-section">
+      <div class="device-section-title">🖥 Captura de tela</div>
+      <div id="screenList">
+        <div class="device-option" id="screenOpt" onclick="selectScreen()" style="cursor:pointer">
+          <input type="radio" name="screen" id="screenRadio">
+          <div>
+            <div class="device-option-label">Captura de tela</div>
+            <div class="device-option-sub">Captura toda a tela ou janela via FFmpeg</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px" id="deviceSummary">
+        nenhum dispositivo selecionado
+      </div>
+      <button class="btn btn-primary btn-full" onclick="saveDevices()">CONFIRMAR SELEÇÃO</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- JS carregado no fim do body para garantir que o DOM está pronto -->
+<script src="app.js"></script>
+</body>
+</html>
